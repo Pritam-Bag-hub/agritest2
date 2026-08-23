@@ -1,9 +1,47 @@
+import { useState } from 'react';
 import { useStore } from '@/store';
-import { UserSquare, MapPin, Sprout, Wallet, TrendingUp, CheckCircle2, Clock, BadgeCheck, Satellite, Phone } from 'lucide-react';
+import { UserSquare, MapPin, Sprout, Wallet, TrendingUp, CheckCircle2, Clock, BadgeCheck, Satellite, Phone, Plus, Loader2, X } from 'lucide-react';
 import ActivityFeed from './ActivityFeed';
 
 export default function LandownerDashboard() {
-  const { contract, workers, approveTask } = useStore();
+  const { contract, workers, approveTask, addActivity } = useStore();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [khasra, setKhasra] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
+  const [details, setDetails] = useState({
+    owner: '',
+    area: '',
+    soilQuality: '',
+  });
+
+  const handleClose = () => {
+    setIsModalOpen(false);
+    setKhasra('');
+    setIsVerifying(false);
+    setIsVerified(false);
+    setDetails({ owner: '', area: '', soilQuality: '' });
+  };
+
+  const handleVerify = () => {
+    if (!khasra.trim()) return;
+    setIsVerifying(true);
+    setIsVerified(false);
+    setTimeout(() => {
+      setIsVerifying(false);
+      setIsVerified(true);
+      setDetails({
+        owner: 'Harpreet Singh',
+        area: '10 Acres',
+        soilQuality: 'Grade A',
+      });
+    }, 1500);
+  };
+
+  const handleRegister = () => {
+    addActivity(`New land registered: Survey #${khasra} (10 Acres, Grade A) verified via AgriStack`, 'system');
+    handleClose();
+  };
 
   const baseRent = Math.round(contract.escrowFunded * 0.3);
   const bonusPool = Math.round(contract.escrowFunded * 0.15);
@@ -24,6 +62,13 @@ export default function LandownerDashboard() {
             </div>
             <h2 className="font-display text-2xl font-bold">Harpreet Singh Farms</h2>
             <p className="text-amber-100 text-sm mt-1">Village Khanna, Ludhiana · Block B, Field 102</p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-2 bg-white text-earth-800 font-semibold text-xs rounded-xl shadow-sm hover:bg-amber-soft transition-all active:scale-[0.98]"
+            >
+              <Plus className="w-4.5 h-4.5 text-earth-700" />
+              Register New Land
+            </button>
           </div>
           <div className="flex gap-3">
             <div className="bg-white/15 backdrop-blur rounded-xl px-4 py-3 text-center min-w-[110px]">
@@ -151,6 +196,117 @@ export default function LandownerDashboard() {
           <ActivityFeed />
         </div>
       </div>
+
+      {/* Register New Land Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-2xl max-w-md w-full overflow-hidden animate-slide-up flex flex-col">
+            
+            {/* Header */}
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-leaf-50 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-forest-700" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-base text-forest-800">Register New Land</h3>
+                  <p className="text-xs text-gray-500">AgriStack Registry Lookup</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleClose} 
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="label-text">Khasra / Survey Number</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. 142/5-B or 203/A"
+                    className="input-field"
+                    value={khasra}
+                    disabled={isVerifying || isVerified}
+                    onChange={(e) => setKhasra(e.target.value)}
+                  />
+                  <button
+                    onClick={handleVerify}
+                    disabled={!khasra.trim() || isVerifying || isVerified}
+                    className="btn-primary shrink-0 font-semibold px-4 text-xs inline-flex items-center gap-1.5 whitespace-nowrap bg-forest-700 hover:bg-forest-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isVerifying ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Satellite className="w-3.5 h-3.5" />
+                    )}
+                    Verify via AgriStack API
+                  </button>
+                </div>
+              </div>
+
+              {/* Verification Spinner state */}
+              {isVerifying && (
+                <div className="rounded-xl bg-leaf-50/40 border border-leaf-100 p-4 flex flex-col items-center justify-center gap-2 text-center py-6 animate-pulse-slow">
+                  <Loader2 className="w-8 h-8 text-forest-600 animate-spin" />
+                  <p className="text-xs font-semibold text-forest-800">Querying AgriStack Registry...</p>
+                  <p className="text-[10px] text-gray-500">Retrieving digital land title & geo-records</p>
+                </div>
+              )}
+
+              {/* Verified Details state */}
+              {isVerified && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="flex items-center justify-between p-3 bg-leaf-50/70 border border-leaf-200 rounded-xl">
+                    <span className="badge bg-leaf-100 text-leaf-700 border border-leaf-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-leaf-600" />
+                      Land Verified via AgriStack
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">ID: AS-7739-IN</span>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                    <div className="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
+                      <span className="text-gray-500 font-medium">Owner</span>
+                      <span className="font-semibold text-gray-800">{details.owner}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
+                      <span className="text-gray-500 font-medium">Area</span>
+                      <span className="font-semibold text-gray-800">{details.area}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 font-medium">Soil Quality</span>
+                      <span className="badge bg-forest-100 text-forest-800 font-semibold">{details.soilQuality}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+              <button
+                onClick={handleClose}
+                className="px-4 py-2 rounded-xl text-xs font-semibold border border-gray-200 hover:border-gray-300 hover:bg-gray-100 text-gray-600 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRegister}
+                disabled={!isVerified}
+                className="btn-primary font-semibold px-4 py-2 text-xs rounded-xl disabled:opacity-50 disabled:cursor-not-allowed bg-forest-700 hover:bg-forest-800 text-white"
+              >
+                Confirm & Link Land
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
